@@ -3,7 +3,12 @@ set -e
 
 : ${SERVER_FQDN:?"-e SERVER_FQDN is not set"}
 
-/usr/bin/openssl dhparam -out /etc/nginx/dh2048.pem 2048
+
+# initial configuration every 5 seconds until successful
+until /opt/confd/confd -onetime -node $ETCD -config-file /etc/confd/conf.d/nginx.toml; do
+    echo "[nginx] waiting for confd to create initial nginx configuration."
+    sleep 5
+done
 
 /usr/sbin/service nginx start
 
