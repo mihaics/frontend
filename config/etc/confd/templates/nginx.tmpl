@@ -1,0 +1,63 @@
+
+
+{{range gets "/registry/services/endpoints/default/svc-*"}}
+{{ $server := split (base .Key) "-" }}
+{{$name := index $server 1}}
+upstream {{$name}}  {
+	ip_hash;
+{{$data := json .Value}}
+{{range $data.subsets}}
+{{$val := .}}
+{{range $val.addresses}}
+	server {{.ip}}:8080 max_fails=1 fail_timeout=10s;
+{{end}}
+{{end}}
+{{end}}
+}
+
+
+
+server {
+    listen       80;
+    server_name {{ getenv "SERVER_FQDN" }};
+
+    #charset koi8-r;
+    #access_log  /var/log/nginx/log/host.access.log  main;
+
+
+    #error_page  404              /404.html;
+
+    # redirect server error pages to the static page /50x.html
+    #
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+
+    #
+    
+    
+
+    
+    location / {
+      rewrite (.*)$ /track/Track redirect;
+    }
+    
+
+   location /track {
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X_FORWARDED_PROTO http;
+        proxy_set_header Host $http_host;
+
+        proxy_pass http://cartrack/track;
+    }
+    location /gprmc {
+        proxy_pass http://cartrack/gprmc;
+    }
+    location /events {
+        proxy_pass http://cartrack/events;
+    }
+
+}
+
+
